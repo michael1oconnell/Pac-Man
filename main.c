@@ -41,8 +41,32 @@ char gameMap[ROW_SIZE][COL_SIZE] =
                         {"%.....%........C........%.....%"},
                         {"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"}};
 
+
+
 void loadGame(Gamestate* game)
 {
+    /* Necessary game variables to load game */
+
+    // colors
+    SDL_Color white = {255, 255, 255, 255};
+
+    // initial animation frame for pacman
+    game->man.animation_frame = 0; // closed mouth
+
+    // initialize game clock
+    game->time = 0;
+
+    //initialize game score/score constants
+    game->gameScore = 0;
+    game->foodScore = 10;
+    game->pelletScore = 50;
+    game->totalFood = INIT_FOOD_AMOUNT;
+
+    //initialize pacman lives
+    game->man.life =  3;
+
+    game->statusState = STATUS_STATE_LIVES;
+
     /* Pacman images */
     SDL_Surface* pacmanSurface = NULL; // source pixels in memory used to create texture
     SDL_Surface* pacmanUpSurface = NULL;
@@ -61,6 +85,7 @@ void loadGame(Gamestate* game)
 
     /* Special Ghost images */
     SDL_Surface* blinkGhostSurface = NULL;
+
 
     // loading pacman
     pacmanSurface = IMG_Load("pacman_closed.png");
@@ -153,10 +178,22 @@ void loadGame(Gamestate* game)
         exit(1);
     }
 
+    // Load Fonts
+    game->font = TTF_OpenFont("ARCADECLASSIC.ttf", 36);
+    if(game->font == NULL)
+    {
+        printf("%s\n\n", TTF_GetError());
+        SDL_Quit();
+        exit(1);
+    }
+
+    /* Font surfaces */
+    SDL_Surface* livesSurface = TTF_RenderText_Blended(game->font, "Lives ", white);
+
     // pacman textures
     game->pacman_t[0] = SDL_CreateTextureFromSurface(game->renderer, pacmanSurface);
     game->pacman_t[1] = SDL_CreateTextureFromSurface(game->renderer, pacmanLeftSurface);
-    game->pacman_t[2] = SDL_CreateTextureFromSurface(game->renderer, pacmanRightSurface);
+    game->pacman_t[2] = SDL_CreateTextureFromSurface(game->renderer, pacmanRightSurface); // will also be used for pacman lives in bottom right of window
     game->pacman_t[3] = SDL_CreateTextureFromSurface(game->renderer, pacmanUpSurface);
     game->pacman_t[4] = SDL_CreateTextureFromSurface(game->renderer, pacmanDownSurface);
 
@@ -169,6 +206,9 @@ void loadGame(Gamestate* game)
     game->ghost_t[2] = SDL_CreateTextureFromSurface(game->renderer, pinkGhostSurface);
     game->ghost_t[3] = SDL_CreateTextureFromSurface(game->renderer, blueGhostSurface);
     game->ghost_t[4] = SDL_CreateTextureFromSurface(game->renderer, blinkGhostSurface);
+
+    /* Font textures */
+    game->livesLabel = SDL_CreateTextureFromSurface(game->renderer, livesSurface);
 
     /* once texture has been created, we don't need original surface, this frees memory */
     //pacman
@@ -188,47 +228,17 @@ void loadGame(Gamestate* game)
     SDL_FreeSurface(blueGhostSurface);
     SDL_FreeSurface(blinkGhostSurface);
 
-    // Load Fonts
-    game->font = TTF_OpenFont("crackman.ttf", 36);
-    if(game->font == NULL)
-    {
-        printf("%s\n\n", TTF_GetError());
-        SDL_Quit();
-        exit(1);
-    }
-
-    // fonts surface/ textures
-    game->scoreLabel = NULL;
-    game->livesLabel = NULL;
-    SDL_Color white = {255, 255, 255, 255};
-    SDL_Surface* fontSurface = TTF_RenderText_Blended(game->font, "Score: ", white);
-    SDL_Surface* livesSurface = TTF_RenderText_Blended(game->font, "Lives: ", white);
-    game->scoreLabel = SDL_CreateTextureFromSurface(game->renderer, fontSurface);
-    game->livesLabel = SDL_CreateTextureFromSurface(game->renderer, livesSurface);
-    game->scoreLabelW = fontSurface->w;
-    game->scoreLabelH = fontSurface->h;
-    game->livesLabelW = livesSurface->w;
-    game->livesLabelH = livesSurface->h;
-    SDL_FreeSurface(fontSurface);
+    // fonts
     SDL_FreeSurface(livesSurface);
 
-    // initial animation frame for pacman
-    game->man.animation_frame = 0; // closed mouth
-
-    // initialize game clock
-    game->time = 0;
-
-    game->statusState = STATUS_STATE_LIVES;
 }
 
 
 /* Handles event processing, returns whether event loop should be over or not (done) */
 int processEvents(SDL_Window* window, Gamestate* game)
 {
-    // amount pacman moves by
-    int moveAmt = 1;
 
-    // whether objects have collided
+    // whether objects have collided (stores return value of collisionDetect())
     unsigned int collide;
 
     int done = 0;
@@ -242,10 +252,11 @@ int processEvents(SDL_Window* window, Gamestate* game)
 
     if(game->statusState == STATUS_STATE_GAME) // only do if game is currently being played (i.e. not gameover or start)
     {
-        SDL_Event event; //union that contains structures for different events
+        SDL_Event event; //union-type that contains structures for different events
 
         // check for events
-        while(SDL_PollEvent(&event)) // will fill event structure with next event form the queue
+        // fills event structure with next event form the queue
+        while(SDL_PollEvent(&event))
         {
             switch(event.type)
             {
@@ -379,6 +390,34 @@ int processEvents(SDL_Window* window, Gamestate* game)
 // e.g. you can't collide with a wall to the left or right-hand side if you aren't moving left/right
 unsigned int collisionDetect(Gamestate* game)
 {
+    /* food collision detection */
+    // collision detection with food (updates score but does not return collision)
+    for(int i = 0; i < game->totalFood; i++)
+    {
+        int foodX = game->food[i].x;
+        int foodY = game->food[i].y;
+
+        // collision detected
+        if(game->man.x == foodX && game->man.y == foodY)
+        {
+            game->gameScore += game->foodScore;
+        }
+    }
+    /* Pellet collision detection */
+    for(int i = 0; i < game->totalPellet; i++)
+    {
+        int pelletX = game->pellet[i].x;
+        int pelletY = game->pellet[i].y;
+
+        // collision detected
+        if(game->man.x == pelletX && game->man.y == pelletY)
+        {
+            printf("test\n");
+            game->gameScore += game->pelletScore;
+        }
+    }
+
+    /* wall collision detection */
     int pacX = game->man.x;
     int pacY = game->man.y;
     int wallX, wallY;
@@ -448,9 +487,9 @@ void doRender(SDL_Renderer* renderer, Gamestate* game)
     int energyOffset = 7;
 
     // counts for keeping track of game objects
-    unsigned int wallCount = 0;
+    unsigned int wallCount = 0; //use also if creating new gameMaps (e.g. for new levels)
     unsigned int foodCount = 0;
-    unsigned int energyCount = 0;
+    unsigned int pelletCount = 0;
 
     // render game objects
     for(int i = 0; i < ROW_SIZE; i++)
@@ -469,7 +508,7 @@ void doRender(SDL_Renderer* renderer, Gamestate* game)
                 game->walls[wallCount].x = j;
                 game->walls[wallCount].y = i;
 
-                wallCount++;
+                wallCount++; // use if creating a new map/levels
 
             }
             // render food
@@ -492,10 +531,10 @@ void doRender(SDL_Renderer* renderer, Gamestate* game)
                 SDL_RenderCopy(renderer, game->food_t, NULL, &energyRect);
 
                 // updating energy coordinates
-                game->energy[energyCount].x = j;
-                game->energy[energyCount].y = i;
+                game->pellet[pelletCount].x = j;
+                game->pellet[pelletCount].y = i;
 
-                energyCount++;
+                pelletCount++;
             }
             // red ghost
             else if(gameMap[i][j] == 'R')
@@ -530,16 +569,44 @@ void doRender(SDL_Renderer* renderer, Gamestate* game)
 
         }
     }
+
+    // updating amounts of food, pellets
+    game->totalFood = foodCount;
+    game->totalPellet = pelletCount;
+
+    /* Render Pacman */
     SDL_Rect pacmanRect = {game->man.x * PIXEL_CONST, game->man.y * PIXEL_CONST, PIXEL_CONST, PIXEL_CONST};
     SDL_RenderCopy(renderer, game->pacman_t[game->man.animation_frame], NULL, &pacmanRect);
+
     // SDL_RenderCopyEx(renderer, game->pacman[game->man.animation_frame], NULL, &pacmanRect, 0, NULL, )
     // You can also use RenderCopyEx to flip the image, rather than have multiple images
 
-    // Rendering Score and Lives (bottom of the screen)
-    SDL_Rect textRect = {PIXEL_CONST, PIXEL_CONST * 15, game->scoreLabelW, game->scoreLabelH};
-    SDL_Rect livesRect = {PIXEL_CONST * 18, PIXEL_CONST * 15, game->livesLabelW, game->livesLabelH};
+    /* Rendering Score and Lives (bottom of the screen) */
+    updateScoreLabel(game);
+
+    // Getting height and width of textures
+    int scoreLabelH, scoreLabelW, livesLabelH, livesLabelW;
+    SDL_QueryTexture(game->scoreLabel, NULL, NULL, &scoreLabelW, &scoreLabelH); // populates w and h variables with correct values based on texture
+    SDL_QueryTexture(game->livesLabel, NULL, NULL, &livesLabelW, &livesLabelH);
+
+    // Copying score into scoreText in order to use as label
+    SDL_Rect textRect = {0, PIXEL_CONST * 15, scoreLabelW, scoreLabelH};
+    SDL_Rect livesRect = {PIXEL_CONST * 18, PIXEL_CONST * 15, livesLabelW, livesLabelH};
     SDL_RenderCopy(renderer, game->scoreLabel, NULL, &textRect);
     SDL_RenderCopy(renderer, game->livesLabel, NULL, &livesRect);
+
+    // Rendering number of lives (pacman icons to the right of lives)
+    int livesXoffset = 35; // distance from each life icon being displayed
+    int livesYoffset = 5;
+
+    for(int i = 0; i < game->man.life; i++)
+    {
+        // Location is bottom right of window after "lives" label
+        SDL_Rect pacmanLife = {PIXEL_CONST * 18 + livesLabelW + (i * livesXoffset), PIXEL_CONST * 15 + livesYoffset , PIXEL_CONST, PIXEL_CONST};
+
+        // Texture is pacman with mouth open facing right
+        SDL_RenderCopy(renderer, game->pacman_t[2], NULL, &pacmanLife);
+    }
 
     /* End of drawing */
 
@@ -597,7 +664,7 @@ int main(int argc, char* argv[])
     {
         // handle events
         done = processEvents(window, &game);
-        printf("%d %d \n\n", game.man.x, game.man.y);
+        //printf("%d %d %d\n\n", game.man.x, game.man.y, game.gameScore);
 
         // correct positions if collision detected
         //collisionDetect(&game);

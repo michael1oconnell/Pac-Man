@@ -1087,19 +1087,19 @@
 
 1583724794 c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\pacman\status.h
 
-1584261920 source:c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\status.c
+1584338546 source:c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\status.c
 	<stdio.h>
 	"main.h"
 	"status.h"
 
-1584262517 c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\main.h
+1584339363 c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\main.h
 	"SDL.h"
 	"SDL_ttf.h"
 	"SDL_image.h"
 
-1584261743 c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\status.h
+1584338546 c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\status.h
 
-1584261855 source:c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\main.c
+1584339380 source:c:\users\cis\desktop\winter 20\career & internship seminar\pacman project\tutorial files\game 1.0\pacman\main.c
 	"main.h"
 	"status.h"
 	"SDL.h"

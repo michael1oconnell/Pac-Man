@@ -8,7 +8,8 @@
 #define STATUS_STATE_GAME 1
 #define STATUS_STATE_GAMEOVER 2
 
-#define WALL_AMOUNT 239
+#define WALL_AMOUNT 239 // wall amount will not change
+#define INIT_FOOD_AMOUNT 215
 
 
 typedef struct
@@ -69,14 +70,23 @@ typedef struct
     // food
     Food food[215];
 
-    // amount of food
+    // total amount of food
     unsigned int totalFood;
 
     // energy pellets
-    EnergyPellet energy[4];
+    EnergyPellet pellet[4];
 
-    // amount of pellet
+    // amount of energy pellet
     unsigned int totalPellet;
+
+    // score of the game
+    unsigned int gameScore;
+
+    // score increase if food pellet is eaten
+    unsigned int foodScore;
+
+    // score increase if energy pellet is eaten
+    unsigned int pelletScore;
 
     // Images (texture is the main type for images in SDL)
     SDL_Renderer* renderer;
@@ -85,7 +95,6 @@ typedef struct
     SDL_Texture* food_t;
     SDL_Texture* scoreLabel;
     SDL_Texture* livesLabel;
-    unsigned int scoreLabelW, scoreLabelH, livesLabelW, livesLabelH;
 
     // Fonts
     TTF_Font* font;
